@@ -1,0 +1,18 @@
+# Challenge material owned by BITS Pilani Digital, not part of this submission.
+# Info.txt also carries Google Docs/Forms links restricted to BITS accounts,
+# so it is deliberately kept out of a public repository.
+BITS Digital CodeForge V1.0.pdf
+Info.txt
+
+# Editor / OS noise
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Scratch
+__*.mjs
+__*.js
+__*.py
+*.log

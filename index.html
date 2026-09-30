@@ -1,0 +1,1739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BITS Pilani Digital – Advanced Grading Console</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+/* ===== BASE (LOCKED) ===== */
+body{
+  margin:0;
+  font-family:Segoe UI, Arial, sans-serif;
+  background:#f5f3ff;
+  color:#111827;
+}
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:16px;
+}
+header{
+  background:#ffffff;
+  border-radius:10px;
+  padding:14px 18px;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  margin-bottom:12px;
+}
+header h1{
+  margin:0;
+  font-size:20px;
+  color:#312e81;
+}
+header h2{
+  margin:2px 0 0;
+  font-size:14px;
+  font-weight:500;
+  color:#5b3cc4;
+}
+
+/* ===== CONTROLS ===== */
+.controls{
+  display:grid;
+  grid-template-columns:1.2fr 1fr 1fr;
+  gap:12px;
+  margin-bottom:6px;
+}
+input,select{
+  padding:8px 10px;
+  border-radius:6px;
+  border:1px solid #d1d5db;
+}
+
+/* ===== Subtle file guidance (world-class) ===== */
+.file-guidance{
+  grid-column:2 / 3;
+  margin-top:4px;
+  padding:8px 10px;
+  font-size:12px;
+  color:#4b5563;
+  background:#f9fafb;
+  border-radius:6px;
+}
+.file-guidance summary{
+  cursor:default;
+  font-weight:500;
+  color:#312e81;
+}
+.file-guidance p{
+  margin:6px 0 0;
+  line-height:1.5;
+}
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:6px;
+  background:#5b3cc4;
+  color:#fff;
+  font-weight:500;
+  cursor:pointer;
+  transition:transform .2s ease, opacity .2s ease;
+}
+button.secondary{
+  background:#e5e7eb;
+  color:#111827;
+}
+button:disabled{
+  opacity:.4;
+  cursor:not-allowed;
+}
+
+.workspace{
+  display:grid;
+  grid-template-columns:420px 1fr;
+  gap:14px;
+}
+
+.panel{
+  background:#ffffff;
+  border-radius:12px;
+  padding:12px;
+  box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:6px;
+  margin-top:8px;
+}
+.stat{
+  background:#f8fafc;
+  border-radius:6px;
+  padding:6px;
+  font-size:12px;
+  text-align:center;
+}
+
+.grade-summary{
+  margin-top:8px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  font-size:12px;
+}
+.grade-summary span{
+  background:#ede9fe;
+  padding:4px 8px;
+  border-radius:999px;
+  transition:transform .25s ease, background-color .25s ease;
+}
+
+.grade-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:10px;
+}
+.grade{
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  padding:8px;
+  background:#fafafa;
+  transition:transform .25s ease, box-shadow .25s ease;
+}
+.min select{background:#fff7ed}
+.max select{background:#eff6ff}
+
+.error{
+  color:#b91c1c;
+  font-size:13px;
+  margin-top:8px;
+}
+.notice{
+  margin-top:10px;
+  font-size:13px;
+  color:#065f46;
+}
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+  align-items:center;
+}
+
+/* ===== ANIMATIONS (LOCKED) ===== */
+.grade.lift{
+  transform:translateY(-2px);
+  box-shadow:0 8px 20px rgba(0,0,0,.12);
+}
+button.enabled{
+  transform:scale(1.03);
+}
+.grade-summary span.pulse{
+  transform:scale(1.08);
+  background:#ddd6fe;
+}
+
+/* ===== TIMER CLOCK ===== */
+.timer-wrapper{
+  margin-top:14px;
+  display:flex;
+  justify-content:center;
+}
+.timer-clock{
+  width:90px;
+  height:90px;
+  position:relative;
+}
+.timer-clock svg{
+  transform:rotate(-90deg);
+}
+.timer-text{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+  font-size:14px;
+  color:#5b3cc4;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important;}
+}
+@media (prefers-reduced-motion: reduce){
+  .grade.lift{transform:translateY(-2px);}
+}
+
+/* ============================================================
+   SHARED / ACCESSIBILITY
+   ============================================================ */
+canvas{max-width:100%}
+.sr-only{
+  position:absolute;
+  width:1px;height:1px;
+  padding:0;margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  white-space:nowrap;
+  border:0;
+}
+button:focus-visible,
+select:focus-visible,
+input:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible{
+  outline:2px solid #5b3cc4;
+  outline-offset:2px;
+}
+/* Browsers without :focus-visible fall back to :focus so a keyboard ring is
+   never missing, even if mouse clicks also show it there. */
+@supports not selector(:focus-visible){
+  button:focus,
+  select:focus,
+  input:focus,
+  summary:focus,
+  [tabindex]:focus{
+    outline:2px solid #5b3cc4;
+    outline-offset:2px;
+  }
+}
+select:disabled{
+  background:#f3f4f6;
+  color:#6b7280;
+  cursor:not-allowed;
+}
+
+/* ============================================================
+   1. DATA HEALTH & ANOMALY INSPECTOR
+   ============================================================ */
+.health{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:6px 10px;
+  margin:0 0 12px;
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid transparent;
+  font-size:12px;
+  line-height:1.5;
+}
+.health[hidden]{display:none}
+.health.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}
+.health.info{background:#f5f3ff;border-color:#ddd6fe;color:#4c1d95}
+.health.warn{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.health-dot{
+  width:8px;height:8px;
+  flex:0 0 auto;
+  border-radius:50%;
+  background:currentColor;
+}
+.health-msg{font-weight:500}
+.health-chips{display:flex;flex-wrap:wrap;gap:6px}
+.health-chips .chip{
+  background:rgba(255,255,255,.65);
+  border:1px solid currentColor;
+  border-radius:999px;
+  padding:1px 8px;
+  font-size:11px;
+  white-space:nowrap;
+}
+.health-detail{flex:1 1 100%;font-size:11px}
+.health-detail summary{cursor:pointer;font-weight:500}
+.health-detail ul{margin:6px 0 0;padding-left:18px;line-height:1.7}
+
+/* ============================================================
+   2. BOUNDARY CASCADER – LIVE MOVEMENT DELTA
+   ============================================================ */
+.grade-delta{
+  margin-top:6px;
+  min-height:15px;
+  font-size:11px;
+  line-height:1.35;
+  color:#6b7280;
+  opacity:0;
+  transition:opacity .25s ease;
+}
+.grade-delta.show{opacity:1}
+.grade-delta.up{color:#047857}
+.grade-delta.down{color:#b45309}
+
+/* ============================================================
+   3. CLICKABLE SUMMARY PILLS + STUDENT ROSTER
+   ============================================================ */
+.grade-summary button{
+  font-family:inherit;
+  font-size:12px;
+  font-weight:500;
+  background:#ede9fe;
+  color:#111827;
+  border:1px solid transparent;
+  border-radius:999px;
+  padding:4px 10px;
+  cursor:pointer;
+  transition:transform .25s ease, background-color .25s ease, color .25s ease;
+}
+.grade-summary button:hover{background:#ddd6fe}
+.grade-summary button.pulse{transform:scale(1.08);background:#ddd6fe}
+.grade-summary button.zero{opacity:.5}
+.grade-summary button[aria-pressed="true"]{
+  background:#5b3cc4;
+  color:#fff;
+  opacity:1;
+}
+
+.roster{margin-top:14px}
+.roster[hidden]{display:none}
+.roster-head{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:8px;
+}
+.roster-head h3{
+  margin:0;
+  font-size:14px;
+  color:#312e81;
+}
+.roster-tools{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.roster-count{font-size:12px;color:#4b5563}
+button.small{padding:6px 10px;font-size:12px}
+
+.roster-scroll{
+  max-height:360px;
+  overflow:auto;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+}
+.roster-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+.roster-table th,
+.roster-table td{
+  text-align:left;
+  padding:7px 10px;
+  border-bottom:1px solid #f1f5f9;
+  white-space:nowrap;
+}
+.roster-table thead th{
+  position:sticky;
+  top:0;
+  z-index:1;
+  background:#f8fafc;
+  color:#312e81;
+  font-weight:600;
+  border-bottom:1px solid #e5e7eb;
+}
+.roster-table tbody tr:hover{background:#faf5ff}
+.roster-table tbody tr:last-child td{border-bottom:none}
+.roster-table .num{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.roster-grade{
+  display:inline-block;
+  min-width:26px;
+  padding:1px 7px;
+  border-radius:999px;
+  background:#ede9fe;
+  color:#312e81;
+  font-weight:600;
+  text-align:center;
+}
+.near-chip{
+  margin-left:6px;
+  padding:1px 6px;
+  border-radius:999px;
+  background:#fffbeb;
+  border:1px solid #fde68a;
+  color:#92400e;
+  font-size:10px;
+  white-space:nowrap;
+}
+tr.near-row td:first-child{box-shadow:inset 3px 0 0 #fbbf24}
+.roster-empty{
+  padding:18px 10px;
+  text-align:center;
+  color:#6b7280;
+  white-space:normal;
+}
+
+/* ===== SMALL-SCREEN FALLBACK (desktop layout untouched) ===== */
+@media (max-width:880px){
+  .controls{grid-template-columns:1fr}
+  .file-guidance{grid-column:1 / -1}
+  .workspace{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .roster-head{align-items:flex-start}
+}
+@media (max-width:620px){
+  .roster-table th,
+  .roster-table td{padding:6px 8px}
+  .roster-scroll{max-height:320px}
+  .health{font-size:11px}
+  .roster-tools{width:100%;justify-content:space-between}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <h1>BITS Pilani Digital</h1>
+  <h2>Advanced Grading Console</h2>
+</header>
+
+<div class="controls">
+  <input id="instructor" placeholder="Instructor name (mandatory)" aria-label="Instructor name (mandatory)">
+  <!-- FIX 1a: accept both modern and legacy Excel workbooks -->
+  <input type="file" id="file" accept=".xlsx,.xls" aria-label="Upload marks workbook (.xlsx or .xls)">
+  <select id="course" aria-label="Select a course"><option value="">Select a course to begin</option></select>
+
+  <!-- Optional, calm guidance BELOW file upload -->
+  <details class="file-guidance">
+    <summary>Marks file format guidance</summary>
+    <p>
+      The uploaded Excel file should contain exactly three columns:
+      <b>BITS ID</b>, <b>Course</b>, and <b>Total Marks</b>.
+    </p>
+    <p>
+      Total Marks are stored as whole numbers. Fractional values are rounded
+      automatically to the nearest whole number (for example, 80.2 → 80 and
+      80.6 → 81).
+    </p>
+    <p>
+      Students who did not appear for the trimester-end examination and are
+      to be awarded an <b>NC</b> grade should not be included in the file.
+    </p>
+    <p>
+      This console is intended for grading only those students who appeared
+      for the examination.
+    </p>
+  </details>
+</div>
+
+<!-- ENHANCEMENT 1: data health & anomaly inspector -->
+<div id="dataHealth" class="health" role="status" aria-live="polite" hidden></div>
+
+<div id="welcome" class="notice" aria-live="polite"></div>
+
+<div class="workspace">
+  <!-- ANALYTICS -->
+  <div class="panel">
+    <canvas id="hist" width="380" height="240" role="img"
+      aria-label="Distribution of total marks with a normal curve overlay"></canvas>
+
+    <!-- FIX 3: Min/Max cards no longer point at each other's value node -->
+    <div class="stats">
+      <div class="stat">Min<br><b id="statMin">—</b></div>
+      <div class="stat">Max<br><b id="statMax">—</b></div>
+      <div class="stat">Avg<br><b id="statAvg">—</b></div>
+      <div class="stat">Median<br><b id="statMed">—</b></div>
+    </div>
+
+    <div class="grade-summary" id="gradeSummary" aria-live="polite"></div>
+  </div>
+
+  <!-- GRADING -->
+  <div class="panel">
+    <div class="grade-grid" id="grades"></div>
+    <div class="error" id="rangeError" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="secondary" id="resetRanges" disabled>Reset Range</button>
+      <button id="download" disabled>Finalize &amp; Download</button>
+    </div>
+
+    <div class="timer-wrapper">
+      <div class="timer-clock">
+        <svg width="90" height="90" aria-hidden="true" focusable="false">
+          <circle cx="45" cy="45" r="40" stroke="#ede9fe" stroke-width="6" fill="none"/>
+          <circle id="timerArc" cx="45" cy="45" r="40"
+            stroke="#5b3cc4" stroke-width="6" fill="none"
+            stroke-linecap="round"
+            stroke-dasharray="251"
+            stroke-dashoffset="251"/>
+        </svg>
+        <div class="timer-text" id="timerText" aria-live="off">00:00</div>
+      </div>
+    </div>
+
+    <div id="thankyou" class="notice" aria-live="polite"></div>
+  </div>
+</div>
+
+<!-- ENHANCEMENT 3: interactive roster & cutoff inspection -->
+<div class="panel roster" id="rosterPanel" hidden>
+  <div class="roster-head">
+    <h3 id="rosterHeading">Student roster</h3>
+    <div class="roster-tools">
+      <span class="roster-count" id="rosterCount" aria-live="polite"></span>
+      <button class="secondary small" id="clearFilter" disabled>Clear Filter</button>
+    </div>
+  </div>
+
+  <!-- tabindex makes the scroll area reachable by keyboard; the region role
+       plus the heading give it an accessible name once focused. -->
+  <div class="roster-scroll" tabindex="0" role="region" aria-labelledby="rosterHeading">
+    <table class="roster-table">
+      <caption class="sr-only">
+        Students in the selected course, highest marks first. Grades reflect the
+        current cutoffs. Rows marked near a cutoff sit within two marks of the
+        next higher grade.
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">BITS ID</th>
+          <th scope="col">Course</th>
+          <th scope="col" class="num">Total Marks</th>
+          <th scope="col">Assigned Grade</th>
+        </tr>
+      </thead>
+      <tbody id="rosterBody"></tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   ELEMENT REFERENCES
+   Explicit lookups instead of relying on implicit id globals,
+   which is what allowed the Min/Max mix-up to go unnoticed.
+   ============================================================ */
+const instructorEl = document.getElementById("instructor");
+const fileEl       = document.getElementById("file");
+const courseEl     = document.getElementById("course");
+const welcomeEl    = document.getElementById("welcome");
+const gradesEl     = document.getElementById("grades");
+const rangeErrorEl = document.getElementById("rangeError");
+const summaryEl    = document.getElementById("gradeSummary");
+const resetBtn     = document.getElementById("resetRanges");
+const downloadBtn  = document.getElementById("download");
+const thankyouEl   = document.getElementById("thankyou");
+const histEl       = document.getElementById("hist");
+const dataHealthEl = document.getElementById("dataHealth");
+const rosterPanel  = document.getElementById("rosterPanel");
+const rosterBodyEl = document.getElementById("rosterBody");
+const rosterCntEl  = document.getElementById("rosterCount");
+const clearFilterEl= document.getElementById("clearFilter");
+const statMinEl    = document.getElementById("statMin");
+const statMaxEl    = document.getElementById("statMax");
+const statAvgEl    = document.getElementById("statAvg");
+const statMedEl    = document.getElementById("statMed");
+const timerArcEl   = document.getElementById("timerArc");
+const timerTextEl  = document.getElementById("timerText");
+
+/* ============================================================
+   CONSTANTS
+   ============================================================ */
+const GRADES = ["A","A-","B","B-","C","C-","D","E"];
+const DEFAULTS = {
+  "A":[80,100],"A-":[70,79],"B":[60,69],"B-":[50,59],
+  "C":[40,49],"C-":[30,39],"D":[20,29],"E":[0,19]
+};
+
+const COURSE_PLACEHOLDER = "Select a course to begin";
+const EMPTY_STAT = "—";
+
+/* FIX 6b: the CSS transitions run for 250ms, so the class has to
+   stay on the element for longer than that or nothing animates. */
+const ANIM_MS = 260;
+
+/* The marks scale is structural, not a preference: A always reaches the top
+   and E always reaches the bottom, so every mark from 0 to 100 gets a grade. */
+const SCALE_MIN = 0;
+const SCALE_MAX = 100;
+
+/* Smallest number of marks a single grade band may span, which is what keeps
+   "Min < Max" true for every band after an automatic cascade. */
+const MIN_BAND = 2;
+
+/* Ranges are fully described by the lower cutoff of every grade except the
+   last, whose floor is pinned to SCALE_MIN. Seven cutoffs, eight bands. */
+const CUT_COUNT = GRADES.length - 1;
+
+/* A student sitting this close below the next band is worth a second look. */
+const NEAR_CUTOFF = 2;
+
+/* How long a movement delta stays legible before it fades out. */
+const DELTA_VISIBLE_MS = 3200;
+
+/* Chart geometry, shared by the histogram AND the bell curve so the
+   two can never drift apart again (FIX 5b). */
+const CHART = {
+  width:    380,
+  height:   240,
+  originX:  30,   // left edge of the first bar
+  barWidth: 24,
+  binStep:  32,   // distance between bar left edges
+  baseline: 210,  // y of the x-axis
+  topPad:   14,
+  bins:     10
+};
+const BIN_WIDTH   = 100 / CHART.bins;                 // marks covered by one bin
+const PLOT_HEIGHT = CHART.baseline - CHART.topPad;    // usable vertical space
+const PX_PER_STUDENT = 12;                            // original bar scale
+
+const TIMER_FULL_SWEEP_MS = 3600000;                  // arc completes in 1 hour
+const circumference = 2 * Math.PI * 40;
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let data = [];                 // normalised records: {id, course, marks}
+let previousSummary = {};      // counts from the previous render, drives the pulse
+let lastCounts = {};           // counts as of the last render, drives the delta
+let pillEls = {};              // grade -> summary pill button
+let gradeFilter = null;        // active roster filter, null = show everyone
+let finalizeCount = 0;
+let histAnimFrame = null;
+let deltaTimers = {};
+
+/* FIX 7a: no clock until an instructor + a valid course exist. */
+let gradingStartTime = null;
+let timerInterval = null;
+
+/* ============================================================
+   TIMER
+   ============================================================ */
+timerArcEl.setAttribute("stroke-dasharray", circumference.toFixed(3));
+timerArcEl.setAttribute("stroke-dashoffset", circumference.toFixed(3));
+
+function renderTimer(){
+  if(gradingStartTime === null) return;
+  const elapsed = Math.max(0, Date.now() - gradingStartTime);
+  const min = Math.floor(elapsed / 60000);
+  const sec = Math.floor((elapsed % 60000) / 1000);
+
+  timerTextEl.textContent =
+    String(min).padStart(2,"0") + ":" + String(sec).padStart(2,"0");
+
+  const progress = Math.min(elapsed / TIMER_FULL_SWEEP_MS, 1);
+  timerArcEl.style.strokeDashoffset = circumference * (1 - progress);
+}
+
+/* Starts on first valid (instructor + course) pair; later calls only
+   resume the ticking display, they never rewind the elapsed total. */
+function startGradingTimer(){
+  if(gradingStartTime === null) gradingStartTime = Date.now();
+  renderTimer();                                        // paint now, don't wait 1s
+  if(timerInterval === null) timerInterval = setInterval(renderTimer, 1000);
+}
+
+function stopGradingTimer(){
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+/* ============================================================
+   FILE INPUT & PARSING
+   ============================================================ */
+fileEl.onchange = e => {
+  const picked = e.target.files && e.target.files[0];
+
+  /* FIX 2a: wipe stale options/state before anything else, so a failed
+     or cancelled second upload can never leave old courses behind. */
+  resetCourseOptions();
+  resetWorkspace();
+  clearDataHealth();
+  data = [];
+
+  if(!picked) return;
+
+  if(typeof XLSX === "undefined"){
+    rangeErrorEl.textContent =
+      "The spreadsheet library could not be loaded. Please check your connection and reload.";
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onerror = () => {
+    rangeErrorEl.textContent = "That file could not be read. Please try again.";
+  };
+
+  reader.onload = ev => {
+    try{
+      /* FIX 1b: ArrayBuffer + {type:"array"} parses reliably across
+         platforms; readAsBinaryString mangles bytes in some browsers. */
+      const wb = XLSX.read(new Uint8Array(ev.target.result), { type:"array" });
+      const firstSheetName = wb.SheetNames && wb.SheetNames[0];
+      const sheet = firstSheetName ? wb.Sheets[firstSheetName] : null;
+      const rows = sheet ? XLSX.utils.sheet_to_json(sheet, { defval:null }) : [];
+
+      /* A BITS ID like 0012345 is often a *number* in Excel whose leading
+         zeros live only in the cell's display format. The raw value drops
+         them, so read the formatted text too and prefer it for the ID.
+         Same options apart from `raw`, so the two passes stay row-aligned;
+         if they ever don't, fall back to raw values alone. */
+      const shown = sheet ? XLSX.utils.sheet_to_json(sheet, { defval:null, raw:false }) : [];
+      const display = shown.length === rows.length ? shown : null;
+
+      const parsed = normaliseRows(rows, display);
+      data = parsed.records;
+
+      /* ENHANCEMENT 1: report on integrity the moment parsing finishes,
+         before the instructor has made a single decision. */
+      renderDataHealth(parsed.health);
+
+      if(!data.length){
+        rangeErrorEl.textContent =
+          "No usable rows found. Expected columns: BITS ID, Course, Total Marks.";
+        return;
+      }
+
+      populateCourses(data);
+      rangeErrorEl.textContent = "";
+    }catch(err){
+      data = [];
+      resetCourseOptions();
+      rangeErrorEl.textContent =
+        "That workbook could not be parsed. Please upload a valid .xlsx or .xls file.";
+      console.error(err);
+    }
+  };
+
+  reader.readAsArrayBuffer(picked);
+};
+
+/* Trims stray header whitespace, drops unusable rows and applies the
+   BITS rule once, at the boundary: marks are whole numbers from here on.
+   FIX 4c. Returns the records plus a health report (ENHANCEMENT 1) so the
+   instructor learns what the file needed before they start grading. */
+/* Excel headers routinely carry stray spaces; index rows by trimmed key. */
+function byTrimmedKey(raw){
+  const row = {};
+  Object.keys(raw).forEach(key => { row[String(key).trim()] = raw[key]; });
+  return row;
+}
+
+function normaliseRows(rows, display){
+  const records = [];
+  const health = {
+    totalRows:  Array.isArray(rows) ? rows.length : 0,
+    kept:       0,
+    skipped:    0,
+    rounded:    0,
+    clamped:    0,
+    missingIds: 0,
+    duplicates: 0,
+    duplicateLabels: [],
+    courses:    0
+  };
+
+  if(!Array.isArray(rows)) return { records, health };
+
+  const text = value =>
+    (value === null || value === undefined) ? "" : String(value).trim();
+
+  rows.forEach((raw, index) => {
+    if(!raw || typeof raw !== "object"){ health.skipped++; return; }
+
+    const row = byTrimmedKey(raw);
+
+    const courseName = text(row["Course"]);
+    const marksText  = text(row["Total Marks"]);
+
+    /* Prefer what the instructor actually sees in the cell, so a
+       display-formatted numeric ID keeps every character it shows. */
+    const formatted = display && display[index] && typeof display[index] === "object"
+      ? text(byTrimmedKey(display[index])["BITS ID"])
+      : "";
+    const id = formatted || text(row["BITS ID"]);
+
+    if(!courseName || !marksText){ health.skipped++; return; }
+
+    const reported = Number(marksText);
+    if(!Number.isFinite(reported)){ health.skipped++; return; }
+
+    let marks = Math.round(reported);                 // 80.2 -> 80, 80.6 -> 81
+    if(marks !== reported) health.rounded++;
+
+    const bounded = Math.min(SCALE_MAX, Math.max(SCALE_MIN, marks));
+    if(bounded !== marks){ health.clamped++; marks = bounded; }
+
+    if(!id) health.missingIds++;
+
+    records.push({ id, course: courseName, marks, reported });
+  });
+
+  health.kept = records.length;
+
+  /* A BITS ID repeated inside the same course is a real duplicate; the same
+     ID across two courses is simply a student taking both. Flag, don't drop:
+     silently removing a row would quietly change someone's transcript. */
+  const seen = new Map();
+  records.forEach(r => {
+    if(!r.id) return;
+    const key = r.id + "\u0000" + r.course;
+    seen.set(key, (seen.get(key) || 0) + 1);
+  });
+  seen.forEach((count, key) => {
+    if(count < 2) return;
+    health.duplicates += count - 1;
+    const split = key.split("\u0000");
+    health.duplicateLabels.push(`${split[0]} in ${split[1]} — ${count} rows`);
+  });
+  health.duplicateLabels.sort((a, b) => a.localeCompare(b));
+
+  health.courses = new Set(records.map(r => r.course)).size;
+
+  return { records, health };
+}
+
+/* ============================================================
+   ENHANCEMENT 1 — DATA HEALTH & ANOMALY INSPECTOR
+   Three tones so the banner never cries wolf:
+     ok    nothing to report
+     info  the file was corrected automatically, nothing is wrong
+     warn  something needs a human look
+   ============================================================ */
+function clearDataHealth(){
+  dataHealthEl.hidden = true;
+  dataHealthEl.className = "health";
+  dataHealthEl.textContent = "";
+}
+
+function renderDataHealth(health){
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+  const corrections = [];
+  const problems = [];
+
+  if(health.rounded)
+    corrections.push(`${plural(health.rounded, "fractional score")} rounded to whole marks`);
+  if(health.clamped)
+    problems.push(`${plural(health.clamped, "score")} clamped to 0–100`);
+  if(health.duplicates)
+    problems.push(`${plural(health.duplicates, "duplicate BITS ID")} flagged`);
+  if(health.missingIds)
+    problems.push(`${plural(health.missingIds, "row")} missing a BITS ID`);
+  if(health.skipped)
+    problems.push(`${plural(health.skipped, "unreadable row")} skipped`);
+
+  /* A file that yielded nothing is never "verified", however tidy its rows
+     were. Without this, an empty sheet showed a calm green confirmation while
+     the error line right below it said no usable rows were found. */
+  const empty = health.kept === 0;
+  const tone = (problems.length || empty) ? "warn"
+             : (corrections.length ? "info" : "ok");
+
+  dataHealthEl.textContent = "";
+  dataHealthEl.className = "health " + tone;
+  dataHealthEl.hidden = false;
+
+  const dot = document.createElement("span");
+  dot.className = "health-dot";
+  dataHealthEl.appendChild(dot);
+
+  const msg = document.createElement("span");
+  msg.className = "health-msg";
+  if(tone === "ok"){
+    msg.textContent =
+      `File verified: ${plural(health.kept, "valid student record")} across ${plural(health.courses, "course")}.`;
+  }else if(empty){
+    msg.textContent = health.totalRows
+      ? `No gradable student rows found in the ${plural(health.totalRows, "row")} read.`
+      : "No student rows found in that workbook's first sheet.";
+  }else{
+    msg.textContent =
+      `${plural(health.totalRows, "row")} parsed: ${plural(health.kept, "valid record")} across ${plural(health.courses, "course")}.`;
+  }
+  dataHealthEl.appendChild(msg);
+
+  const notes = corrections.concat(problems);
+  if(notes.length){
+    const chips = document.createElement("span");
+    chips.className = "health-chips";
+    notes.forEach(note => {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.textContent = note;
+      chips.appendChild(chip);
+    });
+    dataHealthEl.appendChild(chips);
+  }
+
+  /* "2 duplicates flagged" is only actionable if you can see which two. */
+  if(health.duplicateLabels.length){
+    const details = document.createElement("details");
+    details.className = "health-detail";
+
+    const summary = document.createElement("summary");
+    summary.textContent =
+      `View ${plural(health.duplicateLabels.length, "repeated BITS ID")}`;
+    details.appendChild(summary);
+
+    const list = document.createElement("ul");
+    const shown = health.duplicateLabels.slice(0, 20);
+    shown.forEach(label => {
+      const li = document.createElement("li");
+      li.textContent = label;
+      list.appendChild(li);
+    });
+    if(health.duplicateLabels.length > shown.length){
+      const li = document.createElement("li");
+      li.textContent = `…and ${health.duplicateLabels.length - shown.length} more`;
+      list.appendChild(li);
+    }
+    details.appendChild(list);
+    dataHealthEl.appendChild(details);
+  }
+}
+
+/* FIX 2b: Set() collapses the duplicate course name per student row. */
+function populateCourses(records){
+  const unique = [...new Set(records.map(r => r.course))]
+    .sort((a,b) => a.localeCompare(b));
+  unique.forEach(name => courseEl.add(new Option(name, name)));
+}
+
+function resetCourseOptions(){
+  courseEl.innerHTML = "";
+  courseEl.add(new Option(COURSE_PLACEHOLDER, ""));
+  courseEl.value = "";
+}
+
+function resetWorkspace(){
+  gradesEl.innerHTML = "";
+  summaryEl.innerHTML = "";
+  previousSummary = {};
+  lastCounts = {};
+  pillEls = {};
+  gradeFilter = null;
+  // cancel pending fades before dropping the cards they point at
+  Object.keys(deltaTimers).forEach(k => clearTimeout(deltaTimers[k]));
+  deltaTimers = {};
+  rangeErrorEl.textContent = "";
+  thankyouEl.textContent = "";
+  welcomeEl.textContent = "";
+  downloadBtn.disabled = true;
+  downloadBtn.classList.remove("enabled");
+  resetBtn.disabled = true;
+  renderStats();
+  drawHistogram();
+  renderRoster();
+}
+
+/* ============================================================
+   COURSE SELECTION
+   ============================================================ */
+courseEl.onchange = () => {
+  const name = instructorEl.value.trim();
+
+  if(!name){
+    alert("Please enter instructor name first");
+    courseEl.value = "";
+    return;
+  }
+
+  if(!courseEl.value){                 // placeholder re-selected
+    resetWorkspace();
+    return;
+  }
+
+  welcomeEl.textContent =
+    `Welcome ${name.toUpperCase()}. Please review and finalize grading.`;
+  thankyouEl.textContent = "";
+  previousSummary = {};
+  lastCounts = {};
+  gradeFilter = null;                  // a filter from the last course is meaningless here
+
+  buildGradeUI();
+  startGradingTimer();                 // FIX 7a: the only place the clock starts
+  updateAll();
+};
+
+instructorEl.oninput = () => {
+  if(!courseEl.value) return;
+  const name = instructorEl.value.trim();
+  welcomeEl.textContent = name
+    ? `Welcome ${name.toUpperCase()}. Please review and finalize grading.`
+    : "";
+};
+
+/* ============================================================
+   GRADE RANGE UI
+   ============================================================ */
+function rangesReady(){
+  return !!document.getElementById(GRADES[0] + "min");
+}
+
+/* ============================================================
+   ENHANCEMENT 2 — BOUNDARY AUTO-CASCADER
+
+   The eight bands are really seven cutoffs: the lower edge of A down to the
+   lower edge of D. A's ceiling is 100 and E's floor is 0, both structural.
+   Every band's Max is therefore "the next cutoff minus one", which means a
+   continuous scale is not something to validate after the fact — it is the
+   only state the UI can represent.
+
+   Editing one boundary pins that cutoff and pushes the others out of its way,
+   so the gap/overlap error can no longer be reached by normal use.
+   ============================================================ */
+function readCutoffs(){
+  const cuts = [];
+  for(let k = 0; k < CUT_COUNT; k++){
+    cuts.push(+document.getElementById(GRADES[k] + "min").value);
+  }
+  return cuts;
+}
+
+/* Restores "strictly descending, at least MIN_BAND apart" while holding the
+   cutoff the instructor just touched. 101 marks over 8 bands leaves ample
+   slack, so the passes below always converge on a valid scale. */
+function repairCutoffs(cuts, pinned){
+  const n = cuts.length;
+
+  // Make room above and below the pinned cutoff first.
+  for(let k = pinned - 1; k >= 0; k--) cuts[k] = Math.max(cuts[k], cuts[k+1] + MIN_BAND);
+  for(let k = pinned + 1; k < n; k++) cuts[k] = Math.min(cuts[k], cuts[k-1] - MIN_BAND);
+
+  // Respect the ceiling: A needs at least MIN_BAND marks up to SCALE_MAX.
+  cuts[0] = Math.min(cuts[0], SCALE_MAX - MIN_BAND + 1);
+  for(let k = 1; k < n; k++) cuts[k] = Math.min(cuts[k], cuts[k-1] - MIN_BAND);
+
+  // Respect the floor: E needs at least MIN_BAND marks up from SCALE_MIN.
+  cuts[n-1] = Math.max(cuts[n-1], SCALE_MIN + MIN_BAND);
+  for(let k = n - 2; k >= 0; k--) cuts[k] = Math.max(cuts[k], cuts[k+1] + MIN_BAND);
+  cuts[0] = Math.min(cuts[0], SCALE_MAX - MIN_BAND + 1);
+
+  return cuts;
+}
+
+function writeCutoffs(cuts){
+  const last = GRADES.length - 1;
+
+  document.getElementById(GRADES[0] + "max").value = String(SCALE_MAX);
+  for(let k = 0; k < cuts.length; k++){
+    document.getElementById(GRADES[k] + "min").value = String(cuts[k]);
+    if(k > 0){
+      document.getElementById(GRADES[k] + "max").value = String(cuts[k-1] - 1);
+    }
+  }
+  document.getElementById(GRADES[last] + "min").value = String(SCALE_MIN);
+  document.getElementById(GRADES[last] + "max").value = String(cuts[cuts.length - 1] - 1);
+}
+
+function cascadeFrom(gradeIndex, field){
+  if(!rangesReady()) return;
+
+  const cuts = readCutoffs();
+  let pinned;
+
+  if(field === "min"){
+    if(gradeIndex >= CUT_COUNT) return;              // the last band's floor is fixed
+    pinned = gradeIndex;
+    cuts[pinned] = +document.getElementById(GRADES[gradeIndex] + "min").value;
+  }else{
+    if(gradeIndex === 0) return;                     // the top band's ceiling is fixed
+    pinned = gradeIndex - 1;                         // this Max *is* the cutoff above it
+    cuts[pinned] = (+document.getElementById(GRADES[gradeIndex] + "max").value) + 1;
+  }
+
+  writeCutoffs(repairCutoffs(cuts, pinned));
+}
+
+/* One boundary edit: cascade, recompute, then say what it cost or gained. */
+function handleBoundaryChange(card, grade, gradeIndex, field){
+  const before = Object.assign({}, lastCounts);
+  lift(card);
+  cascadeFrom(gradeIndex, field);
+  updateAll();
+  showDelta(card, grade, before[grade], lastCounts[grade]);
+}
+
+/* ENHANCEMENT 2 — live movement delta, in the card that was edited. The slot
+   keeps its height whether or not it holds text, so nothing jumps. */
+function showDelta(card, grade, before, after){
+  const slot = card.querySelector(".grade-delta");
+  if(!slot) return;
+
+  if(!Number.isFinite(before) || !Number.isFinite(after)){
+    slot.className = "grade-delta";
+    slot.textContent = "";
+    return;
+  }
+
+  const diff = after - before;
+  const people = n => `${n} student${Math.abs(n) === 1 ? "" : "s"}`;
+
+  slot.textContent = diff > 0 ? `+${people(diff)} moved into ${grade}`
+                   : diff < 0 ? `${people(diff)} moved out of ${grade}`
+                   : `No change in ${grade}`;
+  slot.className = "grade-delta show " +
+    (diff > 0 ? "up" : diff < 0 ? "down" : "flat");
+
+  clearTimeout(deltaTimers[grade]);
+  deltaTimers[grade] = setTimeout(() => slot.classList.remove("show"), DELTA_VISIBLE_MS);
+}
+
+function buildGradeUI(){
+  gradesEl.innerHTML = "";
+  const last = GRADES.length - 1;
+
+  GRADES.forEach((g, idx) => {
+    const card = document.createElement("div");
+    card.className = "grade";
+
+    const minSel = document.createElement("select");
+    const maxSel = document.createElement("select");
+
+    for(let i = SCALE_MIN; i <= SCALE_MAX; i++){
+      minSel.add(new Option(i, i, i === DEFAULTS[g][0], i === DEFAULTS[g][0]));
+      maxSel.add(new Option(i, i, i === DEFAULTS[g][1], i === DEFAULTS[g][1]));
+    }
+
+    minSel.id = g + "min";
+    maxSel.id = g + "max";
+    minSel.setAttribute("aria-label", `Grade ${g} minimum marks`);
+    maxSel.setAttribute("aria-label", `Grade ${g} maximum marks`);
+
+    /* The two ends of the scale are locked rather than merely validated: if
+       either could drift, marks at the edges would fall outside every band. */
+    if(idx === 0){
+      maxSel.disabled = true;
+      maxSel.title = `The top of the scale is fixed at ${SCALE_MAX}.`;
+    }
+    if(idx === last){
+      minSel.disabled = true;
+      minSel.title = `The bottom of the scale is fixed at ${SCALE_MIN}.`;
+    }
+
+    minSel.onchange = () => handleBoundaryChange(card, g, idx, "min");
+    maxSel.onchange = () => handleBoundaryChange(card, g, idx, "max");
+
+    card.innerHTML = `<strong>${g}</strong><div class="min">Min</div>`;
+    card.querySelector(".min").appendChild(minSel);
+
+    const maxDiv = document.createElement("div");
+    maxDiv.className = "max";
+    maxDiv.innerText = "Max";
+    maxDiv.appendChild(maxSel);
+    card.appendChild(maxDiv);
+
+    const delta = document.createElement("div");
+    delta.className = "grade-delta";
+    delta.setAttribute("aria-live", "polite");
+    card.appendChild(delta);
+
+    gradesEl.appendChild(card);
+  });
+
+  resetBtn.disabled = false;
+}
+
+/* FIX 6b: 260ms > the 250ms transition, so the lift is actually visible. */
+function lift(card){
+  card.classList.add("lift");
+  setTimeout(() => card.classList.remove("lift"), ANIM_MS);
+}
+
+/* FIX 6a: one confirmation, not two stacked dialogs. */
+resetBtn.onclick = () => {
+  if(!rangesReady()) return;
+  const ok = confirm(
+    "This will reset all grade ranges to the default values.\nDo you want to continue?"
+  );
+  if(!ok) return;
+
+  GRADES.forEach(g => {
+    document.getElementById(g + "min").value = String(DEFAULTS[g][0]);
+    document.getElementById(g + "max").value = String(DEFAULTS[g][1]);
+  });
+  updateAll();
+};
+
+/* Since ENHANCEMENT 2 the cascader keeps the scale continuous by construction,
+   so this no longer fires during normal use. It stays as the last line of
+   defence: nothing reaches the CSV export on an invalid scale. */
+function validateRanges(){
+  if(!rangesReady()) return "";
+
+  for(let i = 0; i < GRADES.length; i++){
+    const g = GRADES[i];
+    const minV = +document.getElementById(g + "min").value;
+    const maxV = +document.getElementById(g + "max").value;
+
+    if(!Number.isFinite(minV) || !Number.isFinite(maxV))
+      return "Each grade needs a numeric Min and Max.";
+    if(minV >= maxV) return "Each grade must have Min < Max.";
+
+    if(i > 0){
+      const prevMin = +document.getElementById(GRADES[i-1] + "min").value;
+      if(maxV !== prevMin - 1)
+        return "Grade ranges must be continuous with no gaps or overlaps.";
+    }
+  }
+  return "";
+}
+
+function updateAll(){
+  const err = rangesReady() ? validateRanges() : "";
+  rangeErrorEl.textContent = err;
+
+  const hasRecords = courseMarks().length > 0;
+  downloadBtn.disabled = !rangesReady() || !!err || !hasRecords;
+
+  if(downloadBtn.disabled) downloadBtn.classList.remove("enabled");
+  else downloadBtn.classList.add("enabled");
+
+  drawHistogram();
+  renderStats();
+  computeGradeSummary();
+  renderRoster();
+}
+
+/* ============================================================
+   DATA SELECTORS
+   ============================================================ */
+function courseRows(){
+  if(!courseEl.value) return [];
+  return data.filter(d => d.course === courseEl.value);
+}
+
+function courseMarks(){
+  return courseRows().map(d => d.marks);
+}
+
+/* ============================================================
+   CHART
+   ============================================================ */
+
+/* Maps a mark onto the x-axis using the same geometry the bars use:
+   the centre of bin i sits at originX + i*binStep + barWidth/2. */
+function markToX(mark){
+  return CHART.originX + CHART.barWidth / 2 +
+         ((mark - BIN_WIDTH / 2) / BIN_WIDTH) * CHART.binStep;
+}
+
+function binIndexFor(mark){
+  return Math.max(0, Math.min(CHART.bins - 1, Math.floor(mark / BIN_WIDTH)));
+}
+
+function drawHistogram(){
+  const ctx = histEl.getContext("2d");
+  if(!ctx) return;
+
+  // A fresh render cancels the previous animation instead of racing it.
+  if(histAnimFrame !== null){
+    cancelAnimationFrame(histAnimFrame);
+    histAnimFrame = null;
+  }
+
+  ctx.clearRect(0, 0, CHART.width, CHART.height);
+
+  const marks = courseMarks();
+
+  /* FIX 4a: empty course / no file yet must not reach the drawing math. */
+  if(!marks.length){
+    drawAxis(ctx);
+    drawBinLabels(ctx);
+    ctx.fillStyle = "#9ca3af";
+    ctx.font = "12px Segoe UI, Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("No marks to display yet", CHART.width / 2, CHART.baseline / 2);
+    ctx.textAlign = "left";
+    histEl.setAttribute("aria-label", "Marks distribution chart, no data loaded");
+    return;
+  }
+
+  const bins = Array(CHART.bins).fill(0);
+  marks.forEach(m => { bins[binIndexFor(m)]++; });
+
+  const tallest = Math.max.apply(null, bins);
+  // Keep the original 12px-per-student feel, but shrink if a bin would overflow.
+  const pxPerStudent = tallest > 0
+    ? Math.min(PX_PER_STUDENT, PLOT_HEIGHT / tallest)
+    : PX_PER_STUDENT;
+
+  describeChart(marks);
+
+  let start = null;
+  function animate(ts){
+    if(start === null) start = ts;
+    const p = Math.min((ts - start) / 400, 1);
+
+    ctx.clearRect(0, 0, CHART.width, CHART.height);
+    drawAxis(ctx);
+
+    bins.forEach((count, i) => {
+      const h = count * pxPerStudent * p;
+      ctx.fillStyle = "#5b3cc4";
+      ctx.fillRect(CHART.originX + i * CHART.binStep, CHART.baseline - h, CHART.barWidth, h);
+    });
+
+    drawBinLabels(ctx);
+    drawBellCurve(ctx, marks, p, pxPerStudent);
+
+    if(p < 1) histAnimFrame = requestAnimationFrame(animate);
+    else histAnimFrame = null;
+  }
+  histAnimFrame = requestAnimationFrame(animate);
+}
+
+function drawAxis(ctx){
+  ctx.strokeStyle = "#e5e7eb";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(CHART.originX - 6, CHART.baseline + 0.5);
+  ctx.lineTo(CHART.width - 8, CHART.baseline + 0.5);
+  ctx.stroke();
+}
+
+function drawBinLabels(ctx){
+  ctx.fillStyle = "#111827";
+  ctx.font = "10px Arial";
+  ctx.textAlign = "center";
+  for(let i = 0; i < CHART.bins; i++){
+    const centre = CHART.originX + i * CHART.binStep + CHART.barWidth / 2;
+    ctx.fillText(`${i * BIN_WIDTH}-${i * BIN_WIDTH + BIN_WIDTH}`, centre, 228);
+  }
+  ctx.textAlign = "left";
+}
+
+/* The curve is now drawn on the histogram's own scale: at mark x it plots
+   the expected number of students in a 10-mark band, in the same pixels
+   per student the bars use. */
+function drawBellCurve(ctx, marks, progress, pxPerStudent){
+  const n = marks.length;
+  if(n < 2) return;                                   // FIX 4a: single record
+
+  const mean = marks.reduce((a, b) => a + b, 0) / n;
+  const variance = marks.reduce((a, b) => a + (b - mean) ** 2, 0) / n;
+  const std = Math.sqrt(variance);
+
+  ctx.strokeStyle = "#dc2626";
+  ctx.lineWidth = 2;
+
+  /* FIX 5a: every student scored the same, so std === 0. Dividing here
+     would yield Infinity/NaN, so mark the mean instead of drawing. */
+  if(!Number.isFinite(std) || std <= 0){
+    if(progress < 1) return;
+    const x = markToX(mean);
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x, CHART.baseline);
+    ctx.lineTo(x, CHART.topPad);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  const peak = 1 / (std * Math.sqrt(2 * Math.PI));
+  const maxMark = 100 * progress;
+  let moved = false;
+
+  ctx.beginPath();
+  for(let x = 0; x <= maxMark + 1e-9; x += 0.5){
+    const density = peak * Math.exp(-0.5 * ((x - mean) / std) ** 2);
+    const expected = density * BIN_WIDTH * n;         // students per 10-mark band
+    const px = markToX(x);                            // FIX 5b: aligned to bin centres
+    const py = CHART.baseline - Math.min(expected * pxPerStudent, PLOT_HEIGHT);
+    if(moved) ctx.lineTo(px, py);
+    else { ctx.moveTo(px, py); moved = true; }
+  }
+  if(moved) ctx.stroke();
+}
+
+function describeChart(marks){
+  const n = marks.length;
+  // reduce rather than Math.min.apply: a very large cohort would overflow the
+  // argument list and throw.
+  const lo = marks.reduce((a, b) => Math.min(a, b), Infinity);
+  const hi = marks.reduce((a, b) => Math.max(a, b), -Infinity);
+  histEl.setAttribute("aria-label",
+    `Marks distribution for ${courseEl.value}: ${n} student${n === 1 ? "" : "s"}, ` +
+    `lowest ${lo}, highest ${hi}.`);
+}
+
+/* ============================================================
+   STATISTICS
+   ============================================================ */
+function computeStats(marks){
+  const n = marks.length;
+  if(!n) return null;                                 // FIX 4a: no divide by zero
+
+  const sorted = marks.map(Number).sort((a, b) => a - b);
+  const sum = sorted.reduce((a, b) => a + b, 0);
+  const mid = Math.floor(n / 2);
+
+  /* FIX 4b: both halves coerced to Number before adding, otherwise an
+     even-length set of strings produced "7980" / 2 style nonsense. */
+  const median = n % 2
+    ? Number(sorted[mid])
+    : (Number(sorted[mid - 1]) + Number(sorted[mid])) / 2;
+
+  return {
+    count:  n,
+    min:    sorted[0],
+    max:    sorted[n - 1],
+    avg:    sum / n,
+    median: median
+  };
+}
+
+function renderStats(){
+  const stats = computeStats(courseMarks());
+
+  if(!stats){
+    statMinEl.textContent = EMPTY_STAT;
+    statMaxEl.textContent = EMPTY_STAT;
+    statAvgEl.textContent = EMPTY_STAT;
+    statMedEl.textContent = EMPTY_STAT;
+    return;
+  }
+
+  statMinEl.textContent = String(stats.min);          // lowest score
+  statMaxEl.textContent = String(stats.max);          // highest score
+  statAvgEl.textContent = stats.avg.toFixed(2);
+  statMedEl.textContent = formatNumber(stats.median);
+}
+
+function formatNumber(value){
+  if(!Number.isFinite(value)) return EMPTY_STAT;
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+/* ============================================================
+   GRADE SUMMARY
+   ============================================================ */
+function gradeFor(mark){
+  if(!rangesReady()) return "";
+  for(const g of GRADES){
+    const mi = +document.getElementById(g + "min").value;
+    const ma = +document.getElementById(g + "max").value;
+    if(mark >= mi && mark <= ma) return g;
+  }
+  return "";
+}
+
+/* ENHANCEMENT 3 — the pills double as the roster's filter control. */
+function computeGradeSummary(){
+  summaryEl.innerHTML = "";
+  pillEls = {};
+
+  if(!rangesReady() || !courseEl.value){
+    previousSummary = {};
+    lastCounts = {};
+    return;
+  }
+
+  const counts = {};
+  GRADES.forEach(g => { counts[g] = 0; });
+
+  courseRows().forEach(row => {
+    const g = gradeFor(row.marks);
+    if(g) counts[g]++;
+  });
+
+  GRADES.forEach(g => {
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.textContent = `${g}: ${counts[g]}`;
+    pill.setAttribute("aria-pressed", String(gradeFilter === g));
+    pill.title = `Show only grade ${g} in the roster`;
+    if(!counts[g]) pill.classList.add("zero");
+    pill.onclick = () => setGradeFilter(gradeFilter === g ? null : g);
+
+    if(previousSummary[g] !== undefined && previousSummary[g] !== counts[g]){
+      pill.classList.add("pulse");
+      // FIX 6b: 260ms so the 250ms pill transition can finish.
+      setTimeout(() => pill.classList.remove("pulse"), ANIM_MS);
+    }
+
+    summaryEl.appendChild(pill);
+    pillEls[g] = pill;
+    previousSummary[g] = counts[g];
+  });
+
+  lastCounts = counts;
+}
+
+/* Toggling the filter updates the pressed state in place rather than
+   rebuilding the pills, so keyboard focus stays where the user put it. */
+function setGradeFilter(grade){
+  gradeFilter = grade;
+  GRADES.forEach(g => {
+    const pill = pillEls[g];
+    if(pill) pill.setAttribute("aria-pressed", String(gradeFilter === g));
+  });
+  renderRoster();
+}
+
+clearFilterEl.onclick = () => setGradeFilter(null);
+
+/* ============================================================
+   ENHANCEMENT 3 — STUDENT ROSTER
+   Sorted by marks descending, because cutoff review runs down the list.
+   Every cell is written with textContent: BITS IDs come from a file and are
+   never trusted as markup.
+   ============================================================ */
+function marksBelowNextBand(grade, marks){
+  const i = GRADES.indexOf(grade);
+  if(i <= 0) return null;                       // ungraded, or already the top band
+  const nextMin = +document.getElementById(GRADES[i-1] + "min").value;
+  if(!Number.isFinite(nextMin)) return null;
+  const gap = nextMin - marks;
+  return gap > 0 ? gap : null;
+}
+
+function rosterCell(text, className){
+  const td = document.createElement("td");
+  td.textContent = text;
+  if(className) td.className = className;
+  return td;
+}
+
+function renderRoster(){
+  const rows = courseRows();
+
+  if(!courseEl.value || !rows.length || !rangesReady()){
+    rosterPanel.hidden = true;
+    rosterBodyEl.innerHTML = "";
+    rosterCntEl.textContent = "";
+    clearFilterEl.disabled = true;
+    return;
+  }
+
+  rosterPanel.hidden = false;
+
+  const graded = rows
+    .map(r => ({ id: r.id, course: r.course, marks: r.marks, grade: gradeFor(r.marks) }))
+    .sort((a, b) => b.marks - a.marks || String(a.id).localeCompare(String(b.id)));
+
+  const shown = gradeFilter ? graded.filter(r => r.grade === gradeFilter) : graded;
+
+  rosterCntEl.textContent = gradeFilter
+    ? `${shown.length} of ${graded.length} students in ${courseEl.value} · grade ${gradeFilter}`
+    : `${graded.length} student${graded.length === 1 ? "" : "s"} in ${courseEl.value}`;
+  clearFilterEl.disabled = !gradeFilter;
+
+  const frag = document.createDocumentFragment();
+
+  if(!shown.length){
+    const tr = document.createElement("tr");
+    const td = rosterCell(
+      gradeFilter
+        ? `No students currently fall in grade ${gradeFilter}.`
+        : "No students to show.",
+      "roster-empty"
+    );
+    td.colSpan = 4;
+    tr.appendChild(td);
+    frag.appendChild(tr);
+  }
+
+  shown.forEach(r => {
+    const gap = marksBelowNextBand(r.grade, r.marks);
+    const isNear = gap !== null && gap <= NEAR_CUTOFF;
+
+    const tr = document.createElement("tr");
+    if(isNear) tr.className = "near-row";
+
+    tr.appendChild(rosterCell(r.id || EMPTY_STAT));
+    tr.appendChild(rosterCell(r.course));
+    tr.appendChild(rosterCell(String(r.marks), "num"));
+
+    const gradeTd = document.createElement("td");
+    const badge = document.createElement("span");
+    badge.className = "roster-grade";
+    badge.textContent = r.grade || EMPTY_STAT;
+    gradeTd.appendChild(badge);
+
+    /* The whole point of inspecting a cutoff is spotting who sits just under
+       it, so say how far away the next band is instead of making faculty
+       subtract in their heads. */
+    if(isNear){
+      const next = GRADES[GRADES.indexOf(r.grade) - 1];
+      const chip = document.createElement("span");
+      chip.className = "near-chip";
+      chip.textContent = `${gap} from ${next}`;
+      chip.title = `${gap} mark${gap === 1 ? "" : "s"} below the ${next} cutoff`;
+      gradeTd.appendChild(chip);
+    }
+
+    tr.appendChild(gradeTd);
+    frag.appendChild(tr);
+  });
+
+  rosterBodyEl.innerHTML = "";
+  rosterBodyEl.appendChild(frag);
+}
+
+/* ============================================================
+   CSV EXPORT (RFC 4180)
+   ============================================================ */
+function csvField(value){
+  const s = (value === null || value === undefined) ? "" : String(value);
+  // Quote when the value carries a delimiter, a quote, a newline, or edge spaces.
+  const needsQuotes = /[",\r\n]/.test(s) || s.trim() !== s;
+  return needsQuotes ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function csvRow(fields){
+  return fields.map(csvField).join(",");
+}
+
+/* Sortable local timestamp with no comma, so it needs no CSV quoting. */
+function localTimestamp(){
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+         `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fileSlug(name){
+  return String(name).trim().replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || "course";
+}
+
+function ordinal(n){
+  const words = { 1:"first", 2:"second", 3:"third", 4:"fourth", 5:"fifth" };
+  if(words[n]) return words[n];
+  const lastTwo = n % 100;
+  const last = n % 10;
+  const suffix = (lastTwo >= 11 && lastTwo <= 13) ? "th"
+               : last === 1 ? "st"
+               : last === 2 ? "nd"
+               : last === 3 ? "rd" : "th";
+  return n + suffix;
+}
+
+downloadBtn.onclick = () => {
+  const rows = courseRows();
+  if(!rows.length){
+    rangeErrorEl.textContent = "There are no records to export for this course.";
+    return;
+  }
+
+  const err = validateRanges();
+  if(err){
+    rangeErrorEl.textContent = err;
+    return;
+  }
+
+  const graded = [];
+  rows.forEach(row => {
+    const g = gradeFor(row.marks);
+    if(g) graded.push([row.id, row.marks, g]);
+  });
+
+  if(!graded.length){
+    rangeErrorEl.textContent = "No student falls inside the current grade ranges.";
+    return;
+  }
+
+  finalizeCount++;
+  stopGradingTimer();
+  renderTimer();
+
+  const elapsed = gradingStartTime === null ? 0 : Math.max(0, Date.now() - gradingStartTime);
+  const minT = Math.floor(elapsed / 60000);
+  const secT = Math.floor((elapsed % 60000) / 1000);
+
+  /* FIX 7b: no stray leading space after "Course,", every field escaped,
+     CRLF line breaks, and a UTF-8 BOM so Excel opens it cleanly.
+     The metadata block records who graded, which course, when it was
+     finalized and how long it took, so the exported file is self-describing
+     rather than relying on a message that disappears with the page. */
+  const lines = [
+    csvRow(["Instructor", instructorEl.value.trim()]),
+    csvRow(["Course", courseEl.value]),
+    csvRow(["Students Graded", graded.length]),
+    csvRow(["Finalized", localTimestamp()]),
+    csvRow(["Grading Time", `${minT} min ${secT} sec`]),
+    csvRow(["Attempt", finalizeCount]),
+    "",
+    csvRow(["BITS ID", "Total Marks", "Grade"])
+  ];
+  graded.forEach(entry => lines.push(csvRow(entry)));
+
+  const csv = "\uFEFF" + lines.join("\r\n") + "\r\n";
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  // Name the file after the course so grading three courses does not produce
+  // grades.csv, grades(1).csv, grades(2).csv.
+  a.download = `grades-${fileSlug(courseEl.value)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+
+  thankyouEl.textContent = finalizeCount === 1
+    ? `You completed grading in ${minT} min ${secT} sec in your first attempt.`
+    : `You took a total of ${minT} min ${secT} sec to complete the grading in your ${ordinal(finalizeCount)} attempt.`;
+};
+
+/* ============================================================
+   INITIAL PAINT
+   Renders the empty state only. The timer deliberately stays at 00:00
+   until an instructor name and a valid course are both present.
+   ============================================================ */
+renderStats();
+drawHistogram();
+renderRoster();
+</script>
+</body>
+</html>
