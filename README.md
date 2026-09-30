@@ -13,8 +13,8 @@ contains the repaired and extended version.
 | | |
 |---|---|
 | **Repository** | https://github.com/cybersd12321/bits-codeforge-grading-console |
-| **Live demo** | https://cybersd12321.github.io/bits-codeforge-grading-console/ — *available once GitHub Pages is enabled; see [Deployment](#github-pages)* |
-| **Mirror** | `https://<project>.vercel.app` — *fill in after importing to Vercel* |
+| **Live demo** | **https://cybersd12321.github.io/bits-codeforge-grading-console/** |
+| **Mirror** | `https://<project>.vercel.app` — *optional; see [Vercel](#vercel)* |
 | **Stack** | One `index.html`. No build step, no framework, no package manager. |
 | **Dependency** | [SheetJS](https://sheetjs.com) `xlsx.full.min.js` via CDN — the only external script, unchanged from the original brief. |
 
@@ -263,6 +263,13 @@ Output Directory setting above is what to correct.
 
 Run this against the live URL, not just localhost. Both platforms serve over HTTPS,
 so the SheetJS CDN script loads without mixed-content blocking.
+
+The GitHub Pages deployment has been checked at the transport level already: the site
+returns **200** over HTTPS, HTTP requests are **301**-upgraded, HSTS is set, the served
+bytes are identical to the committed `index.html`, the SheetJS CDN resolves, there are
+no `http://` subresources, both sample workbooks download intact, and the two
+uncommitted files correctly return **404**. The rows below are the interactive checks,
+which need a real browser.
 
 | # | Check | Expected result |
 |---|---|---|
