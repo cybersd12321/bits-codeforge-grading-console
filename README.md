@@ -12,8 +12,9 @@ contains the repaired and extended version.
 
 | | |
 |---|---|
-| **Live demo** | `https://<your-username>.github.io/<your-repo>/` *(fill in after enabling Pages)* |
-| **Mirror** | `https://<your-project>.vercel.app` *(fill in after importing to Vercel)* |
+| **Repository** | https://github.com/cybersd12321/bits-codeforge-grading-console |
+| **Live demo** | https://cybersd12321.github.io/bits-codeforge-grading-console/ — *available once GitHub Pages is enabled; see [Deployment](#github-pages)* |
+| **Mirror** | `https://<project>.vercel.app` — *fill in after importing to Vercel* |
 | **Stack** | One `index.html`. No build step, no framework, no package manager. |
 | **Dependency** | [SheetJS](https://sheetjs.com) `xlsx.full.min.js` via CDN — the only external script, unchanged from the original brief. |
 
@@ -37,8 +38,8 @@ guard paths can be exercised without hand-crafting a file.
 No install, no server required.
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/cybersd12321/bits-codeforge-grading-console.git
+cd bits-codeforge-grading-console
 start index.html          # Windows
 # open index.html         # macOS
 # xdg-open index.html     # Linux
@@ -229,8 +230,12 @@ is no build step and no `package.json`, so both hosts serve the file directly.
 4. Set **Branch** to `main` and the folder to `/ (root)`. Click **Save**.
 5. Open the **Actions** tab and wait for the `pages-build-deployment` run to finish
    green. First publish usually takes under two minutes.
-6. Your URL appears back on the Pages settings screen, in the form
-   `https://<username>.github.io/<repo>/`.
+6. The URL appears back on the Pages settings screen. For this repository it will
+   be:
+
+   ```
+   https://cybersd12321.github.io/bits-codeforge-grading-console/
+   ```
 
 ### Vercel
 
